@@ -1,41 +1,65 @@
-# Auto-committing future submissions
+# Auto-organizing future submissions
 
-New accepted submissions can land in this repo automatically, in the right
-pattern folder, using a browser extension.
+New accepted submissions can be filed into the correct pattern folder
+automatically, using a browser extension to capture them plus the
+`scripts/organize.py` helper to classify and place them.
 
-## Recommended: LeetHub v3 (or an equivalent)
+## 1. Capture: a LeetHub-style extension
 
-[LeetHub v3](https://github.com/arreic/LeetHub-3.0) is a maintained Chrome
-extension that commits each accepted LeetCode submission to a GitHub repository.
-(The original `LeetHub` is unmaintained; use a current fork.)
+[LeetHub v3](https://github.com/arreic/LeetHub-3.0) (a maintained fork; the
+original `LeetHub` is unmaintained) commits each accepted submission to a GitHub
+repo. Install it, authenticate with GitHub, and point it at a repo it controls
+(a dedicated `leetcode-raw` inbox repo is cleanest).
 
-### Setup
+## 2. Classify + place: `scripts/organize.py`
 
-1. Install the extension from the Chrome Web Store.
-2. Authenticate it with GitHub and point it at a repository — either this one
-   (`leetcode-python`) or a dedicated raw repo it fully controls.
-3. Solve a problem and submit. On **Accepted**, the extension pushes the
-   solution and a small notes file.
+Drop the raw `.py` submissions into this repo's `inbox/` folder (copy them from
+the extension's repo, or export with `leetcode-export`), then run:
 
-### How it fits this repo's layout
+```bash
+python scripts/organize.py --inbox inbox
+```
 
-LeetHub-style extensions organize by **problem**, not by **pattern**, so their
-output does not match `solutions/<pattern>/` directly. Two workable options:
+For each submission the script:
 
-- **Option A (recommended): a separate inbox repo.** Let the extension push to a
-  repo it owns (e.g. `leetcode-raw`). Periodically move new solutions here,
-  dropping each into its pattern folder and adding the docstring + a test. This
-  keeps this repo curated while capturing everything automatically.
-- **Option B: push here, curate in place.** Point the extension at this repo; it
-  creates per-problem folders at the root. On a cadence, relocate them under the
-  correct `solutions/<pattern>/` folder and add a test.
+1. Reads the problem **slug** from the filename.
+2. Queries LeetCode's public GraphQL API for the **canonical frontend number**,
+   title, and **topic tags** — so numbering is always correct (the exporters use
+   LeetCode's internal id, which differs for ~half of problems).
+3. Maps the topic tags to a pattern folder (`two-pointers` → `two_pointers`,
+   `sliding-window` → `sliding_window`, `dynamic-programming` →
+   `dynamic_programming`, …; unmapped problems fall back to `arrays_hashing`).
+4. Writes `solutions/<pattern>/pNNNN_<slug>.py` with the standard docstring
+   header (title, link, and `TODO` for the paraphrase/approach/complexity), plus
+   a test stub under `tests/<pattern>/`.
 
-Either way, the curation step is: **classify → add complexity docstring → add a
-test → move into the pattern folder.**
+Check where a problem would land without writing anything:
+
+```bash
+python scripts/organize.py --classify longest-substring-without-repeating-characters
+# -> sliding_window
+python scripts/organize.py --inbox inbox --dry-run
+```
+
+## 3. Curate + commit (the human step)
+
+The script gets each solution into the right folder with a correct name; you
+then:
+
+- fill in the one-line paraphrase, **Approach**, and **Time/Space**;
+- replace the test stub with real example cases;
+- run `python scripts/gen_readmes.py` to refresh the pattern tables;
+- `ruff check --fix . && ruff format . && pytest`, then commit.
+
+This keeps the repo curated and its CI green, while removing the tedious part —
+figuring out the canonical number and the right pattern folder.
+
+> Fully automatic commit-from-CI is intentionally not wired up: raw submissions
+> usually need a small cleanup (a paraphrase, real test cases, an unused-import
+> fix) before they'd pass this repo's lint/format/test gate.
 
 ## Note on problem statements
 
-LeetCode problem text is LeetCode's copyrighted content, so it is **not**
-committed here. Each solution file references the problem by title and URL and
-paraphrases the task in one line — the code is yours; the prompt stays on
-LeetCode.
+LeetCode problem text is LeetCode's copyright and is **not** committed here. Each
+file links the problem and paraphrases it in one line; only your solution code
+lives in the repo.

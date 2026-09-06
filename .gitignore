@@ -25,3 +25,7 @@ Thumbs.db
 
 # Raw export scratch (never commit private problem statements)
 leetcode-export-raw/
+
+# Raw LeetCode submissions staged for organizing (only organized files are committed)
+inbox/*.py
+inbox/*.done
